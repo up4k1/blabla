@@ -1,0 +1,73 @@
+version: "3"
+
+services:
+  traefik:
+    image: traefik:v2.5
+    container_name: traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./letsencrypt:/letsencrypt"
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+      - "--certificatesresolvers.myresolver.acme.email=${EMAIL}"
+      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
+
+  shlink:
+    image: shlinkio/shlink:stable
+    restart: always
+    container_name: shlink-backend
+    environment:
+      - TZ=${TIMEZONE}
+      - DEFAULT_DOMAIN=${DOMAIN}
+      - IS_HTTPS_ENABLED=true
+      - GEOLITE_LICENSE_KEY=${GEOLITE_KEY}
+      - DB_DRIVER=maria
+      - DB_USER=shlink
+      - DB_NAME=shlink
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=database
+    depends_on:
+      - database
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shlink.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.shlink.entrypoints=websecure"
+      - "traefik.http.routers.shlink.tls.certresolver=myresolver"
+
+  database:
+    image: mariadb:10.8
+    restart: always
+    container_name: shlink-database
+    environment:
+      - MARIADB_ROOT_PASSWORD=${DB_PASSWORD}
+      - MARIADB_DATABASE=shlink
+      - MARIADB_USER=shlink
+      - MARIADB_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - /home/docker/shlink:/var/lib/mysql
+
+  shlink-web-client:
+    image: shlinkio/shlink-web-client
+    restart: always
+    container_name: shlink-gui
+    volumes:
+      - /home/docker/shlink/servers.json:/usr/share/nginx/html/servers.json
+    depends_on:
+      - shlink
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.shlink-gui.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.shlink-gui.entrypoints=websecure"
+      - "traefik.http.routers.shlink-gui.tls.certresolver=myresolver"
+    ports:
+      - 8081:80
+
+volumes:
+  letsencrypt:
