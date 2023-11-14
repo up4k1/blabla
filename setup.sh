@@ -92,6 +92,8 @@ services:
       - "traefik.http.routers.shlink-gui.entrypoints=websecure"
       - "traefik.http.routers.shlink-gui.tls.certresolver=myresolver"
       - "traefik.http.middlewares.shlink-gui-auth.basicauth.users=$http_user:\$hashed_password"
+    ports:
+      - 8081:80
 
 volumes:
   letsencrypt:
