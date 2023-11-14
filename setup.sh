@@ -63,11 +63,8 @@ services:
       - DB_HOST=database
     depends_on:
       - database
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.shlink.rule=Host(\`$domain\`)"
-      - "traefik.http.routers.shlink.entrypoints=websecure"
-      - "traefik.http.routers.shlink.tls.certresolver=myresolver"
+    ports:
+      - 8081:8080
 
   database:
     image: mariadb:10.8
@@ -95,8 +92,6 @@ services:
       - "traefik.http.routers.shlink-gui.entrypoints=websecure"
       - "traefik.http.routers.shlink-gui.tls.certresolver=myresolver"
       - "traefik.http.middlewares.shlink-gui-auth.basicauth.users=$http_user:\$hashed_password"
-    ports:
-      - 8081:80
 
 volumes:
   letsencrypt:
